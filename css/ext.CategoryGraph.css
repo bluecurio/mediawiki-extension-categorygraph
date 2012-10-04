@@ -1,0 +1,22 @@
+/* 
+ * ext.CategoryGraph.css
+ */
+
+div#categoryGraph {
+	min-height: 1em;
+}
+
+/* @embed */
+.categoryGraphLoading {
+    padding-left: 20px; 
+    background: url(../images/wait16trans.gif) no-repeat left;
+}
+
+table.categoryGraphNode {
+    border-spacing:0px;
+    border-collapse: collapse;
+}
+
+table.categoryGraphNode td {
+    padding: 0px;
+}
