@@ -1,46 +1,50 @@
 <?php
+/**
+ * CategoryGraph - A MediaWiki extension
+ *
+ *
+ *
+ * 
+ * Copyright 2013 Daniel Renfro
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ */
 
-// ============ check if we are inside MediaWiki =======================
+// ------------ check if we are inside MediaWiki -----------------------
+
 if ( !defined('MEDIAWIKI') ) {
     echo <<<EOT
 To install my extension, you'll need to edit your LocalSettings.php with
 the appropriate configuration directives. Please see the README that comes
-with the software. 
+with the software.
 EOT;
     exit( 1 );
 }
 
-// ============ includes (autoloaded) =================================
+// ------------ includes (autoloaded) ---------------------------------
+
 $includes = dirname(__FILE__) . '/';
 $wgAutoloadClasses['CategoryGraph'] = $includes . 'CategoryGraph.body.php';
 $wgAutoloadClasses['CategoryGraphApi'] = $includes . 'CategoryGraphApi.php';
 
 
-// ============= default global variables, constants, etc. =====================
+// ------------- default global variables, constants, etc. ---------------------
+
 define( 'CATEGORY_GRAPH_VERSION', '0.7 alpha' );
-define( 'CATEGORY_GRAPH_MODULE', 'CategoryGraph' );
 
-/**
- * The resources used by MediaWiki's ResourceLoader.
- **/
-$wgCategoryGraph_Modules = array(
-	CATEGORY_GRAPH_MODULE => array(
-		'scripts' =>  array(
-			'js/ext.CategoryGraph.js'
-		),
-		'styles' => array(
-			'css/ext.CategoryGraph.css'
-		),
-        'dependencies' => array(
-            'mediawiki.language'
-        ),
-        'messages' => array(
-            'category-graph-loading-graph'
-        )   
-	)
-);
+// ------------ credits ---------------------------------
 
-// ============ credits =================================
 $wgExtensionCredits['specialpage'][] = array(
 	'name' 			=> 'CategoryGraph',
 	'description' 	=> 'Makes a graph to display the heirarchy of categoies.',
@@ -48,27 +52,51 @@ $wgExtensionCredits['specialpage'][] = array(
     'version' 		=> CATEGORY_GRAPH_VERSION
 );
 
-// ============ hooks =================================
-$wgHooks['ResourceLoaderRegisterModules'][] = 'efCategoryGraph_RegisterModules';
-$wgHooks['BeforePageDisplay'][] = 'efCategoryGraph_BeforePageDisplay';
 
+// ------------ languages ---------------------------------
 
-// ============ languages =================================
 $wgExtensionMessagesFiles['CategoryGraph'] 	= dirname(__FILE__) . '/CategoryGraph.i18n.php';
 
 
-// ============ parser-tag initialization =================================
+// ------------ parser-tag initialization ---------------------------------
+
 if ( defined( 'MW_SUPPORTS_PARSERFIRSTCALLINIT' ) ) {
 	$wgHooks['ParserFirstCallInit'][] = 'wfCategoryGraphInitialization';
 } else {
 	$wgExtensionFunctions[] = 'wfCategoryGraphInitialization';
 }
 
-// ============= API ===========================================================
+// ------------- API -----------------------------------------------------------
+
 $wgAPIModules['categoryGraph'] = 'CategoryGraphApi';
 
 
-// ============ global-level functions =================================
+// --------- ResourceLoader ----------------------------------------------
+
+$wgResourceModules[ CategoryGraph::MODULE ] = array(
+	'scripts' =>  array(
+		'js/ext.CategoryGraph.js'
+	),
+	'styles' => array(
+		'css/ext.CategoryGraph.css'
+	),
+	'dependencies' => array(
+		'mediawiki.language'
+	),
+	'messages' => array(
+		'category-graph-loading-graph'
+	),
+	'localBasePath' => __DIR__,
+	'remoteExtPath' => 'CategoryGraph',
+);
+
+// ------------ hooks ---------------------------------
+
+
+$wgHooks['BeforePageDisplay'][] = function( OutputPage &$out, Skin &$skin ) {
+	$out->addModules( CategoryGraph::MODULE );
+	return true;
+};
 
 
 /**
@@ -84,52 +112,16 @@ function wfCategoryGraphInitialization( &$parser ) {
  **/
 function efCategoryGraph_RegisterModules( $resourceLoader ) {
 	global $wgExtensionAssetsPath, $wgCategoryGraph_Modules;
-		
+
 	$localpath = dirname( __FILE__ ) . '/';
 	$remotepath = "$wgExtensionAssetsPath/CategoryGraph/";
 
 	foreach ( $wgCategoryGraph_Modules as $name => $resources ) {
-		$resourceLoader->register( 
+		$resourceLoader->register(
 			$name, new ResourceLoaderFileModule( $resources, $localpath, $remotepath )
 		);
 	}
 	return true;
 }
 
-
-/**
- * Include the necessary CSS and JS.
- *
- * If the Resource Loader is not working as reliably as expected, or is not loaded at all,
- *   this will shove the CSS and Javascript into the <head> of the page using this code. 
- *   But beware, the Javascript will probably not work as expected (or at all) because jQuery 
- *   hasn't been loaded yet.
- *
- */
-function efCategoryGraph_BeforePageDisplay( $out ) {
-	global 	$wgExtensionAssetsPath, $wgCategoryGraph_Modules, $wgResourceModules;
-
-	if ( isSet($wgResourceModules) ) {	
-		$out->addModules( CATEGORY_GRAPH_MODULE );
-	}
-	else {
-		foreach ( $wgCategoryGraph_Modules as $moduleName => $module ) {
-			foreach ( $module as $type => $array ) {
-				switch ( $type ) {
-					case "scripts":
-						foreach ( $array as $js ) {
-							$out->addScriptFile( $wgExtensionAssetsPath . '/CategoryGraph/'. $js );
-						}
-						break;
-					case "styles": 
-						foreach ( $array as $css ) {
-							$out->addExtensionStyle( $wgExtensionAssetsPath . '/CategoryGraph/' . $css );
-						}
-						break;						
-				}
-			}
-		}
-	}
-	return true;
-}
 

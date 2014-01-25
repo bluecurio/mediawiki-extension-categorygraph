@@ -2,15 +2,15 @@
 
 class CategoryGraph {
 
+	const MODULE = 'ext.categoryGraph';
 
-
-    // =============== Member variables ==================================================
+    // --------------- Member variables --------------------------------------------------
 
     /**
      * These are the parameters that are set in the parser-tag in the wikipage, not
      *    the parameters that were given to the ajax call. See the API module for those.
      */
-    protected $params; 
+    protected $params;
 
     /**
      * Parameters for the parser-tag that are recognized and do something.
@@ -24,7 +24,7 @@ class CategoryGraph {
 
     /**
      * This keeps track of how many levels down we have recursed when finding descendants.
-     *   Without this variable we are lost.  
+     *   Without this variable we are lost.
      */
     protected $subcat_recusion_level = 0;
     protected $ancestor_recursion_level = 0;
@@ -32,7 +32,7 @@ class CategoryGraph {
 	/**
 	 * To check for circular references. This is not only to keep MW sane (and from recursing
 	 *    infinitely,) but also for Graphviz (which doesn't handle cyclic graphs.)
-	 */	
+	 */
 	protected $descendents_encountered = array();
 	protected $ancestors_encountered = array();
 
@@ -45,7 +45,7 @@ class CategoryGraph {
 	 * The title of the Category page that we're making a graph for...as a parameter
 	 *   for the constructor.
 	 */
-    protected $title; 
+    protected $title;
 
     /**
      * A list of formats supported by the dot program. BE WARNED: not all of these are
@@ -99,7 +99,7 @@ class CategoryGraph {
      **/
     protected $format;
 
-    // =============== Methods ==================================================
+    // --------------- Methods --------------------------------------------------
 
 
 	/**
@@ -113,20 +113,20 @@ class CategoryGraph {
 
 
         // default attributes for the graph
-        $this->setGraphAttributes( 
+        $this->setGraphAttributes(
             array(
                 'nodesep' => '0.2',             // min distance (inches) between two adjacent nodes in same rank
                 'rankseq' => '0.2 equally',     // min distance between two adjacent ranks
                 'rankdir' => 'TB',              // draw Top to Bottom
                 //'ratio' => '1.2',             // this can have MAJOR consequences on rendering time
-                //'size' => '4,4',                // in inches (keep in mind resolution (~72dpi?))     
+                //'size' => '4,4',                // in inches (keep in mind resolution (~72dpi?))
             )
         );
 
         /**
-         * Default attributes to set for all nodes. 
+         * Default attributes to set for all nodes.
          **/
-        $this->setNodeAttributes( 
+        $this->setNodeAttributes(
             array(
                 'color' => 'black',
                 'shape' => 'note',
@@ -142,7 +142,7 @@ class CategoryGraph {
     }
 
     /**
-     * Sets the title to create a graph for. 
+     * Sets the title to create a graph for.
      **/
     public function setTitle( Title $t ) {
         $this->title = $t;
@@ -150,7 +150,7 @@ class CategoryGraph {
     }
 
 	/**
-	 *  
+	 *
 	 */
 	public function getAcceptedParameters() {
 		return $this->acceptedParameters;
@@ -158,7 +158,7 @@ class CategoryGraph {
 
 	/**
 	 * Getter for the params. Parameter keys are always LOWERCASE.
-	 * 
+	 *
 	 */
 	public function getParameter( $parameter ) {
 		if ( in_array($parameter, array_keys($this->params)) ) {
@@ -166,7 +166,7 @@ class CategoryGraph {
 		}
 		return false;
 	}
-    
+
     public function setParameter( $parameter, $value ) {
         $this->params[ $parameter ] = $value;
         return true;
@@ -209,13 +209,13 @@ class CategoryGraph {
 
         if ( !is_dir($path_to_graphviz_install) ) {
             $error = <<<EOT
-The path to the graphviz program ($path_to_graphviz_install) is not a valid directory. 
+The path to the graphviz program ($path_to_graphviz_install) is not a valid directory.
 You can set this variable by calling the __METHOD__ method or by setting the global
 variable \$wgGraphVizInstallPath in LocalSettings.php.
 EOT;
 
             throw new MWException( $error );
-            
+
         }
 
         if ( !is_executable($path_to_graphviz_install . 'dot') ) {
@@ -259,13 +259,13 @@ EOT;
 
 
         // the path where graphviz put it's binaries...specifically the 'dot' program
-        if ( !isSet($wgGraphVizInstallPath) ) { 
+        if ( !isSet($wgGraphVizInstallPath) ) {
             if ( stristr( PHP_OS, 'WIN' ) && !stristr( PHP_OS, 'Darwin' ) ) {
                 // '/' will be converted to '\\' later on, so feel free how to write your path C:/ or C:\\
                 $this->setExecPath( 'C:/Program Files/Graphviz/bin/' );
             } else {
                 //  common: '/usr/bin/'  '/usr/local/bin/' or (if set) '$DOT_PATH/'
-                $this->setExecPath( '/usr/bin/' ); 
+                $this->setExecPath( '/usr/bin/' );
             }
         }
         else {
@@ -278,7 +278,7 @@ EOT;
 	 */
 	public function execute( $input, array $args, Parser $parser, PPFrame $frame ) {
 		global $wgTitle, $wgOut, $wgCommandLineMode, $wgUser;
-	
+
 		if ( $wgCommandLineMode ) {
 			return "";
 		}
@@ -319,12 +319,12 @@ EOT;
 					$this->params[ strtolower($parameter) ] = $value;
 				}
 			}
-		}	
+		}
 
         // set the default parameters
         if ( !isSet($this->params['title']) ) {
             // make sure that this is a category page so we can use it's title
-            //    as the default value. 
+            //    as the default value.
             global $wgTitle;
             if ( $wgTitle->getNamespace() != 14 ) {
                 return Xml::tags(
@@ -336,17 +336,17 @@ EOT;
             $this->params['title'] = $wgTitle->getFullText();
         }
         if ( !isSet($this->params['max_descendants']) ) {
-            $this->params['max_descendants'] = -1; // int, not string 
+            $this->params['max_descendants'] = -1; // int, not string
         }
         if ( !isSet($this->params['max_ancestors']) ) {
-            $this->params['max_ancestors'] = -1; // int, not string 
+            $this->params['max_ancestors'] = -1; // int, not string
         }
 
         // make an array of variables that we want to hand off to the JavaScript
         $options = new StdClass;
         $options->{'title'} = $this->params['title'];
         $options->{'max_descendants'} = $this->params['max_descendants'];
-        $options->{'max_ancesotors'} = $this->params['max_ancestors'];
+        $options->{'max_ancestors'} = $this->params['max_ancestors'];
         $options->{'format'} = $this->params['format'];
 
 		// Put those variables into the page as a JavaScript object.
@@ -354,19 +354,19 @@ EOT;
 		$wgOut->addScript(
 			Skin::makeVariablesScript( array('wgCategoryGraphOptions' => $options ) )
 		);
-		
+
 		// have to explicity open, then close the DIV
 		$html = "";
-		$html .= Xml::openElement( 
-			'div', 
-			array( 
-				'id' => 'categoryGraph'				
+		$html .= Xml::openElement(
+			'div',
+			array(
+				'id' => 'categoryGraph'
 			)
 		);
 		$html .= Xml::closeElement( 'div' );
 		return $html;
 	}
-	
+
     public function render() {
         return $this->ajaxResponse();
     }
@@ -387,11 +387,8 @@ EOT;
               )
         );
         $this->path_to_file = $this->getPathToFile( $this->filename );
-
-
-
         // create the dot specification for the graph
-		$this->dot = $this->createDot( 
+		$this->dot = $this->createDot(
 			$this->getDescendants( $this->title ),
 			$this->getAncestors( $this->title )
         );
@@ -451,7 +448,7 @@ EOT;
     }
 
     /**
-     * Creates the filename *without* the file-extension (which depends on the value in 
+     * Creates the filename *without* the file-extension (which depends on the value in
      *    the global variable $wgCategoryGraph_Format.)
      *
      * TODO: implement a better naming scheme. maybe md5() or sha1() ?
@@ -476,22 +473,22 @@ EOT;
 	 * The system-call to create the image.
 	 */
 	protected function makeGraph( $dot, $path_to_file ) {
-	
+
         // got to have something to make!
 		if ( !$dot || !is_string($dot) ) {
 			return false;
-        }		
+        }
 
         // we should have checked this already, but check it again.
         if ( !in_array($this->params['format'], $this->acceptableFormats) ) {
             return false;
         }
 
-        // run the dot program 
+        // run the dot program
 		$command = sprintf(
-			'%sdot -T%s', 
+			'%sdot -T%s',
             $this->exec,
-            $this->params['format'] 
+            $this->params['format']
         );
 
         // options for the process-handling
@@ -514,16 +511,16 @@ EOT;
 		return false;
 	}
 
-	
+
 	/**
-	 * Title::getText isn't smart enough to give us what we want; it cuts off 
+	 * Title::getText isn't smart enough to give us what we want; it cuts off
 	 *   everything before a colon, whether or not it is a valid namespace prefix
-	 *   for this language. 
+	 *   for this language.
 	 *
 	 */
 	protected function getText( Title $t ) {
 		global $wgContLang;
-	
+
         $namespace = $wgContLang->getNSText( NS_CATEGORY );
         if ( preg_match('/^'.$namespace.'/', $t->getPrefixedDBkey()) ) {
             $key = preg_replace( '/^'.$namespace.':/', "", $t->getPrefixedDBkey() );
@@ -532,13 +529,13 @@ EOT;
             $key = $t->getPrefixedDBkey();
         }
         return $key;
-	}	
+	}
 
 
 	/**
 	 * Gets all the descendants recursively. Ignores redirects to categories, and probably
 	 *    recurses infinity when encountering a circular graph.
-	 * 
+	 *
 	 */
     public function getDescendants( Title $t, $level = 1 ) {
 
@@ -546,7 +543,7 @@ EOT;
         $stack = array();
 
 		$key = $this->getText( $t );
-		
+
 		if ( in_array( $key, $this->descendents_encountered ) ) {
 			return false;
 		}
@@ -569,7 +566,7 @@ EOT;
             	'ORDER BY' => 'page_title ASC'
             ),
             array(
-                'page' => array( 'INNER JOIN', 'cl_from = page.page_id' )
+                'page' => array( 'INNER JOIN', 'cl_from = page_id' )
             )
         );
 
@@ -582,10 +579,10 @@ EOT;
 		while ($row = $dbr->fetchRow($res)) {
 			$resultKey = $this->getText(
 				Title::newFromText( $row['page_title'], NS_CATEGORY )
-			);			
+			);
             $stack[ $resultKey ] = str_replace( " " , '_', $t->getFullText() );
         }
-       
+
         // keep track of how many levels down we have been
         if ( $this->subcat_recusion_level < $level) {
             $this->subcat_recusion_level = $level;
@@ -602,7 +599,7 @@ EOT;
             $nt = Title::newFromText( $parent, NS_CATEGORY );
             $d = $this->getDescendants( $nt, $level );
             if ( $d === false ) {
-            	return;
+            	return $stack;
             }
             elseif ( $d ) {
                 $stack[$parent] = $d;
@@ -616,19 +613,19 @@ EOT;
 
 	public function getImmediateParentCategories( Title $t = null ) {
 		global $wgContLang;
-		
+
 		if ( is_null($t) ) {
 			$t = $this->title;
-		}		
-		
+		}
+
 		$titleKey = $this->getText( $t );
         $dbr =& wfGetDB( DB_SLAVE );
-        
+
 		if ( in_array( $titleKey, $this->ancestors_encountered ) ) {
 			return array();
 		}
 		array_push( $this->ancestors_encountered, $titleKey );
-   
+
 		$result = $dbr->select(
 			array('page', 'categorylinks'),
 			'cl_to',
@@ -639,19 +636,19 @@ EOT;
 				'cl_from <> 0'
 			),
             __METHOD__,
-            array( 
+            array(
             	'ORDER BY' => 'cl_sortkey'
             ),
             array(
-                'page' => array( 'INNER JOIN', 'cl_from = page.page_id' )
+                'page' => array( 'INNER JOIN', 'cl_from = page_id' )
             )
         );
-        
+
         $parentCategories = array();
         if ( $dbr->numRows($result) > 0 ) {
         	while ( $row = $dbr->fetchObject($result) ) {
         		$parentCategories[ $wgContLang->getNSText( NS_CATEGORY ) . ':' . $row->cl_to ] = $t->getFullText();
-        	} 
+        	}
         }
         return $parentCategories;
 	}
@@ -666,12 +663,12 @@ EOT;
         // keep track of how many levels up we have been
         if ( $this->ancestor_recursion_level < $level ) {
             $this->ancestor_recursion_level = $level;
-        }		
-        
+        }
+
         // should we keep recursing? (or just cursing? #$#$%@!!!)
         $level++;
         if ($this->getParameter('max_ancestors') != -1 && $level > $this->getParameter('max_ancestors') ) {
-            return $stack();
+            return $stack;
         }
 
 		$parents = $this->getImmediateParentCategories( $t );
@@ -681,8 +678,8 @@ EOT;
 			if ( $nt ) {
 				$stack[$parent] = $this->getAncestors( $nt, $level );
 			}
-		}         	
-    	
+		}
+
         // finally, back out.
         return $stack;
     }
@@ -696,7 +693,7 @@ EOT;
 			$dot .= sprintf( "\t\"%s\"=\"%s\";\n", $key, $value );
         }
 
-        $dot .= "\tcomment=\"". str_replace('"', '\"', $this->getGraphComment()) ."\"\n";        
+        $dot .= "\tcomment=\"". str_replace('"', '\"', $this->getGraphComment()) ."\"\n";
 
         // set the attributes for all nodes
         $dot .= "\tnode " . $this->makeNodeAttributes( $this->nodeAttributes ) . "\n";
@@ -706,15 +703,15 @@ EOT;
 
 		// attributes for the main node
 		$dot .= "\t\"" . $this->title->getFullText() . "\";\n";
-		
+
 		// ancestors, rooted with our title
-		$dot .= $this->array2dot4ancestors( array( $this->title->getFullText() => $ancestors) ); 
-		
+		$dot .= $this->array2dot4ancestors( array( $this->title->getFullText() => $ancestors) );
+
 		// descendants
 		$dot .= $this->array2dot4descendants( array( $this->title->getFullText() => $descendants) );
-		
+
 		$dot .= "}";
-		
+
 		return $dot;
 	}
 
@@ -728,7 +725,7 @@ EOT;
         $article = new Article( $this->title );
         $comment = 'Graph of the page ' .$article->getTitle()->getFullText() . ' from '.$wgSitename.'. Created on ' . date('c', time());
 
-        return $comment;  
+        return $comment;
     }
 
 
@@ -797,7 +794,7 @@ EOT;
 						"\t\"%s\" -> \"%s\";\n",
 						$current,
 						$ancestor
-					);				
+					);
 				}
 			}
 		}
